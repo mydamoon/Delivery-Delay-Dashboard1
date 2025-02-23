@@ -7,3 +7,4 @@ streamlit_folium
 folium
 branca
 requests
+plotly
