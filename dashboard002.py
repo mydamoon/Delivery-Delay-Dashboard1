@@ -123,7 +123,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### 🗺️ Heatmap of Delivery Delays (Clients)")
+        st.markdown("### 🗺️ Heatmap of Delivery Delays (Inbound Logistics)")
         m = folium.Map(location=[df["Latitude"].mean(), df["Longitude"].mean()], zoom_start=4)
         heat_data = df[["Latitude", "Longitude", "norm_delay"]].values.tolist()
         HeatMap(heat_data, gradient={"0.0": "blue", "0.5": "green", "1.0": "red"}, radius=10, blur=10, min_opacity=0.5).add_to(m)
@@ -142,7 +142,7 @@ if uploaded_file is not None:
     #     st_folium(m3, width="100%", height=500)
 
     with col2:
-        st.markdown("### 🌍 Average Delivery Delays by Country")
+        st.markdown("### 🌍 Average Delivery Delays by Country (Outbound Logistics)")
         
         # Création de la carte Folium
         m3 = folium.Map(location=[20, 0], zoom_start=2)
