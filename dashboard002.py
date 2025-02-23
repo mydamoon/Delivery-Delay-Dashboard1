@@ -259,12 +259,12 @@ if uploaded_file is not None:
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # 🔹 Line Chart (Total Delay Trend Over Time)
+    # 🔹 Line Chart (Average Delay Trend Over Time)
     with col6:
-        st.markdown("### 📈 Total Delay Trend Over Time")
+        st.markdown("### 📈 Average Delay Trend Over Time")
 
         df["Shipping Month"] = df["Shipping date (DateOrders)"].dt.to_period("M")
-        df_delay_trend = df.groupby(["Shipping Month"]).size()
+        df_delay_trend = df.groupby(["Shipping Month"])["Delay"].mean()  # Moyenne des retards
 
         # Création du graphique interactif avec Plotly
         fig = go.Figure()
@@ -273,22 +273,21 @@ if uploaded_file is not None:
             x=df_delay_trend.index.astype(str),
             y=df_delay_trend.values,
             mode="lines+markers",
-            name="Total Delays",
-            marker=dict(size=8, color="orange", opacity=0.5),  # Points rouges
-            line=dict(width=2, color="orange", backoff=0.5),  # Ligne rouge
+            name="Average Delay",
+            marker=dict(size=8, color="orange", opacity=0.5),  # Points oranges semi-transparents
+            line=dict(width=2, color="orange", backoff=0.5),  # Ligne orange semi-transparente
             hoverinfo="x+y"  # Affiche le mois et la valeur au survol
         ))
 
         fig.update_layout(
             xaxis_title="Shipping Month",
-            yaxis_title="Total Number of Deliveries",
-            title="Total Delay Trend Over Time",
+            yaxis_title="Average Delay (days)",
+            title="Average Delay Trend Over Time",
             legend_title="",
             hovermode="x"  # Mode interactif optimisé
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
 
     st.markdown("---")
 
