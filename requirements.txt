@@ -3,9 +3,6 @@ pandas
 folium
 matplotlib
 numpy
-streamlit_folium
-folium
 branca
-json
 requests
-os
+streamlit_folium
