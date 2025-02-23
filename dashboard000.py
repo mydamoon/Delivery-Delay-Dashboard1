@@ -1,30 +1,41 @@
 import streamlit as st
-import subprocess
+import pandas as pd
+import dashboard002
+import dashboard003
+import dashboard004
 
 # 📊 **Dashboard Title**
 st.set_page_config(page_title="Supply Chain Shipments - Delays", layout="wide")
+st.title("📊 Supply Chain Shipments - Delays")
 
-# 🏠 **Main Title**
-st.title("📦 Supply Chain Shipments - Delays")
+# # 📂 **Upload CSV File**
+# st.sidebar.title("📂 Upload Data")
+# uploaded_file = st.sidebar.file_uploader("Upload a CSV file", type="csv")
 
-# 📌 **Create Columns for Buttons**
-col1, col2, col3 = st.columns(3)
+# 📌 **Navigation Menu**
+st.sidebar.title("📍 Navigation")
+selected_dashboard = st.sidebar.radio("Go to:", 
+                                      ["Home", 
+                                       "Region & Mode", 
+                                       "Product Categories & Delays", 
+                                       "Shipping Delays & Profitability"])
 
-# 🎯 **Region & Mode Dashboard**
-with col1:
-    st.markdown("### 📍 Region & Mode")
-    if st.button("Go to Region & Mode", key="region_mode"):
-        subprocess.run(["streamlit", "run", "dashboard002.py"])
+# ✅ **Load Data Only Once**
+# if uploaded_file is not None:
+if True:
+    # ✅ **Navigation Logic**
+    if selected_dashboard == "Home":
+        st.title("🏠 Welcome to the Supply Chain Shipments - Delays Dashboard")
+        st.markdown("### Please select a dashboard from the sidebar.")
 
-# 📦 **Product Categories Dashboard**
-with col2:
-    st.markdown("### 🏷️ Product Category")
-    if st.button("Go to Product Category", key="product_category"):
-        subprocess.run(["streamlit", "run", "dashboard003.py"])
+    elif selected_dashboard == "Region & Mode":
+        dashboard002.show_dashboard()
 
-# 💰 **Profitability Analysis Dashboard**
-with col3:
-    st.markdown("### 💰 Profitability Analysis")
-    if st.button("Go to Profitability", key="profitability_analysis"):
-        subprocess.run(["streamlit", "run", "dashboard004.py"])
+    elif selected_dashboard == "Product Categories & Delays":
+        dashboard003.show_dashboard()
 
+    elif selected_dashboard == "Shipping Delays & Profitability":
+        dashboard004.show_dashboard()
+
+else:
+    st.warning("⚠️ Please upload a CSV file to view the visualizations.")
