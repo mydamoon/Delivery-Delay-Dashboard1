@@ -40,28 +40,33 @@ if uploaded_file is not None:
     # 📌 **Add year filter**
     st.sidebar.markdown("### 📆 Filter by Year")
     available_years = df["Shipping date (DateOrders)"].dt.year.dropna().unique()
-    selected_year = st.sidebar.selectbox("Select Year", ["All"] + sorted(available_years))
+    selected_year = st.sidebar.multiselect("Select Year", ["All"] + sorted(available_years), default="All")
 
     # Apply year filter
-    if selected_year != "All":
-        df = df[df["Shipping date (DateOrders)"].dt.year == selected_year]
+    if "All" not in selected_year:  # Vérifie si "All" n'est pas sélectionné
+        selected_year = [int(year) for year in selected_year]  # Convertit tous les éléments en int
+        df = df[df["Shipping date (DateOrders)"].dt.year.isin(selected_year)]  # Filtre avec isin()
+
 
     # 📌 **Adding dynamic filters**
     st.sidebar.markdown("### 🎯 Available Filters")
 
     filters = {
-        "Type": st.sidebar.selectbox("Transaction Type", ["All"] + list(df["Type"].unique())),
-        "Category Name": st.sidebar.selectbox("Product Category", ["All"] + list(df["Category Name"].unique())),
-        "Department Name": st.sidebar.selectbox("Department", ["All"] + list(df["Department Name"].unique())),
-        "Market": st.sidebar.selectbox("Market", ["All"] + list(df["Market"].unique())),
-        "Order Region": st.sidebar.selectbox("Order Region", ["All"] + list(df["Order Region"].unique())),
-        "Product Name": st.sidebar.selectbox("Product Name", ["All"] + list(df["Product Name"].unique())),
-        "Shipping Mode": st.sidebar.selectbox("Shipping Mode", ["All"] + list(df["Shipping Mode"].unique()))
+        "Type": st.sidebar.multiselect("Transaction Type", ["All"] + list(df["Type"].unique()), default="All"),
+        "Category Name": st.sidebar.multiselect("Product Category", ["All"] + list(df["Category Name"].unique()), default="All"),
+        "Department Name": st.sidebar.multiselect("Department", ["All"] + list(df["Department Name"].unique()), default="All"),
+        "Market": st.sidebar.multiselect("Market", ["All"] + list(df["Market"].unique()), default="All"),
+        "Order Region": st.sidebar.multiselect("Order Region", ["All"] + list(df["Order Region"].unique()), default="All"),
+        "Product Name": st.sidebar.multiselect("Product Name", ["All"] + list(df["Product Name"].unique()), default="All"),
+        "Shipping Mode": st.sidebar.multiselect("Shipping Mode", ["All"] + list(df["Shipping Mode"].unique()), default="All")
     }
 
     # 📌 **Applying filters**
     for col, value in filters.items():
-        if value != "All":
+        if isinstance(value, list):  # Si plusieurs valeurs sélectionnées (multiselect)
+            if "All" not in value:
+                df = df[df[col].isin(value)]
+        elif value != "All":  # Si une seule valeur sélectionnée (selectbox)
             df = df[df[col] == value]
 
     # 📌 **Converting geographic coordinates**
@@ -214,39 +219,76 @@ if uploaded_file is not None:
 
     # st.title("📊 Dashboard - Delivery Delays")
 
+    import plotly.express as px
+    import plotly.graph_objects as go
+
     ## 📊 **2️⃣ Stacked Bar Chart - Delay Count by Shipping Mode | Line Chart - Delay Trend Over Time**
     col5, col6 = st.columns(2)
 
+    # 🔹 Stacked Bar Chart (Delay Count by Shipping Mode)
     with col5:
         st.markdown("### 📊 Delay Count by Shipping Mode")
 
         df_delay_ratio = df.groupby(["Shipping Mode", "Delay Category"]).size().unstack(fill_value=0)
 
-        fig, ax = plt.subplots(figsize=(8, 5))
-        df_delay_ratio.plot(kind="bar", stacked=True, color=["blue", "green", "red"], edgecolor="black", ax=ax, alpha=0.5)
+        # Création du graphique interactif avec Plotly
+        fig = go.Figure()
+        colors = {"Low": "blue", "Medium": "green", "High": "red"}
 
-        plt.xlabel("Shipping Mode")
-        plt.ylabel("Number of Deliveries")
-        plt.title("Delay Count by Shipping Mode")
-        plt.legend(title="Delay Category")
-        plt.xticks(rotation=0)  # Set x-axis labels horizontally
-        st.pyplot(fig)
+        for category in ["Low", "Medium", "High"]:
+            if category in df_delay_ratio.columns:
+                fig.add_trace(go.Bar(
+                    x=df_delay_ratio.index,
+                    y=df_delay_ratio[category],
+                    name=category,
+                    marker=dict(
+                        color=colors[category],  # Couleur principale
+                        opacity=0.5,  # Opacité à 50%
+                        line=dict(color="black", width=1)  # Contour noir avec épaisseur 1
+                    ),
+                    hoverinfo="x+y"  # Affiche le Shipping Mode et la valeur au survol
+                ))
 
+        fig.update_layout(
+            barmode="stack",
+            xaxis_title="Shipping Mode",
+            yaxis_title="Number of Deliveries",
+            title="Delay Count by Shipping Mode",
+            legend_title="Delay Category"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 🔹 Line Chart (Total Delay Trend Over Time)
     with col6:
-        st.markdown("### 📈 Delay Trend Over Time")
+        st.markdown("### 📈 Total Delay Trend Over Time")
 
         df["Shipping Month"] = df["Shipping date (DateOrders)"].dt.to_period("M")
-        df_delay_trend = df.groupby(["Shipping Month", "Delay Category"]).size().unstack(fill_value=0)
+        df_delay_trend = df.groupby(["Shipping Month"]).size()
 
-        fig, ax = plt.subplots(figsize=(8, 5))
-        df_delay_trend.plot(kind="line", marker="o", ax=ax, color=["blue", "green", "red"], alpha=0.5)
+        # Création du graphique interactif avec Plotly
+        fig = go.Figure()
 
-        plt.xlabel("Shipping Month")
-        plt.ylabel("Number of Deliveries")
-        plt.title("Delay Trend Over Time")
-        plt.legend(title="Delay Category")
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-        st.pyplot(fig)
+        fig.add_trace(go.Scatter(
+            x=df_delay_trend.index.astype(str),
+            y=df_delay_trend.values,
+            mode="lines+markers",
+            name="Total Delays",
+            marker=dict(size=8, color="orange", opacity=0.5),  # Points rouges
+            line=dict(width=2, color="orange", backoff=0.5),  # Ligne rouge
+            hoverinfo="x+y"  # Affiche le mois et la valeur au survol
+        ))
+
+        fig.update_layout(
+            xaxis_title="Shipping Month",
+            yaxis_title="Total Number of Deliveries",
+            title="Total Delay Trend Over Time",
+            legend_title="",
+            hovermode="x"  # Mode interactif optimisé
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
 
     st.markdown("---")
 
