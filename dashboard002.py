@@ -9,7 +9,7 @@ import branca.colormap as cm
 import json
 import requests
 import os
-
+print("Test")
 # 📂 **Loading the JSON file containing country translations**
 translation_file = "country_translation.json"
 
