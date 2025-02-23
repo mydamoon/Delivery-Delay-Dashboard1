@@ -7,4 +7,3 @@ streamlit_folium
 folium
 branca
 requests
-os
