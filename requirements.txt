@@ -6,3 +6,4 @@ numpy
 branca
 requests
 streamlit_folium
+plotly
