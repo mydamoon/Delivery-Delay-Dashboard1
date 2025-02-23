@@ -256,3 +256,11 @@ xkit==0.0.0
 xlrd==2.0.1
 xyzservices==2025.1.0
 yarl==1.18.3
+streamlit
+pandas
+folium
+matplotlib
+numpy
+branca
+requests
+
