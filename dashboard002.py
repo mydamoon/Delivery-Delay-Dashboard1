@@ -40,34 +40,24 @@ if uploaded_file is not None:
     # 📌 **Add year filter**
     st.sidebar.markdown("### 📆 Filter by Year")
     available_years = df["Shipping date (DateOrders)"].dt.year.dropna().unique()
-    selected_year = st.sidebar.multiselect("Select Year", ["All"] + sorted(available_years), default="All")
-
-    # Apply year filter
-    if "All" not in selected_year:  # Vérifie si "All" n'est pas sélectionné
-        selected_year = [int(year) for year in selected_year]  # Convertit tous les éléments en int
-        df = df[df["Shipping date (DateOrders)"].dt.year.isin(selected_year)]  # Filtre avec isin()
-
+    selected_years = st.sidebar.multiselect("Select Year", available_years, default=available_years)
+    if selected_years:
+        df = df[df["Shipping date (DateOrders)"].dt.year.isin(selected_years)]
 
     # 📌 **Adding dynamic filters**
     st.sidebar.markdown("### 🎯 Available Filters")
 
-    filters = {
-        "Type": st.sidebar.multiselect("Transaction Type", ["All"] + list(df["Type"].unique()), default="All"),
-        "Category Name": st.sidebar.multiselect("Product Category", ["All"] + list(df["Category Name"].unique()), default="All"),
-        "Department Name": st.sidebar.multiselect("Department", ["All"] + list(df["Department Name"].unique()), default="All"),
-        "Market": st.sidebar.multiselect("Market", ["All"] + list(df["Market"].unique()), default="All"),
-        "Order Region": st.sidebar.multiselect("Order Region", ["All"] + list(df["Order Region"].unique()), default="All"),
-        "Product Name": st.sidebar.multiselect("Product Name", ["All"] + list(df["Product Name"].unique()), default="All"),
-        "Shipping Mode": st.sidebar.multiselect("Shipping Mode", ["All"] + list(df["Shipping Mode"].unique()), default="All")
-    }
 
-    # 📌 **Applying filters**
-    for col, value in filters.items():
-        if isinstance(value, list):  # Si plusieurs valeurs sélectionnées (multiselect)
-            if "All" not in value:
-                df = df[df[col].isin(value)]
-        elif value != "All":  # Si une seule valeur sélectionnée (selectbox)
-            df = df[df[col] == value]
+    # 🔹 **Drilldown to Department**
+    column_names = list(df.columns)
+    filters = ["Type","Category Name","Department Name","Market","Order Region","Product Name","Shipping Mode",]
+    for col in filters:
+        departments = df[col].unique()
+        if len(departments)<15:
+            selected_departments = st.sidebar.multiselect(col, departments, default=departments)
+
+            if selected_departments:
+                df = df[df[col].isin(selected_departments)]
 
     # 📌 **Converting geographic coordinates**
     df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
@@ -311,6 +301,38 @@ if uploaded_file is not None:
         - 📍 **General trends:** Most countries are **light green**, indicating slight average delays.
         - 🔵 **Advance deliveries (blue):** Some countries like **French Guiana and parts of Africa** receive shipments early.
         - 🔴 **Significant delays (deep red):** Found in **Central Asia and South America**.
+        """)
+
+    # 🔹 KPI Section at the Bottom
+    st.markdown("---")
+    st.markdown("### 📊 KPI - Delivery Performance Ratio")
+
+    # Calculate KPI
+    avg_real_shipping = df["Days for shipping (real)"].mean()
+    avg_scheduled_shipping = df["Days for shipment (scheduled)"].mean()
+
+    if avg_scheduled_shipping != 0:  # Avoid division by zero
+        delivery_ratio = avg_real_shipping / avg_scheduled_shipping
+    else:
+        delivery_ratio = None
+
+    # Display KPI as a fraction
+    col_kpi1, col_kpi2 = st.columns(2)
+
+    with col_kpi1:
+        st.metric(label="📦 Delivery Performance Ratio", 
+                  value=f"{avg_real_shipping:.1f} / {avg_scheduled_shipping:.1f}" if delivery_ratio is not None else "N/A", 
+                  delta=f"{(delivery_ratio - 1) * -100:.1f}%" if delivery_ratio is not None else "N/A")
+
+    with col_kpi2:
+        st.markdown("""
+        **📌 Interpretation:**  
+        - 📦 **Ratio displayed as a fraction**:  
+          - Example: `6.5 / 3.2` means that deliveries take **6.5 days on average** instead of the **scheduled 3.2 days**.
+        - 📊 **Analysis:**  
+          - If the **numerator** is **higher**, deliveries take **longer than expected**.
+          - If the **denominator** is **higher**, deliveries are **faster than expected**.
+          - If the value is **≈ 1/1**, then delivery times are well respected.
         """)
 
     st.markdown("---")
