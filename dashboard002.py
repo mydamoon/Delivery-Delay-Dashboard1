@@ -254,7 +254,7 @@ if uploaded_file is not None:
     col7, col8 = st.columns(2)
 
     with col7:
-        st.markdown("### 📝 Analysis of Client Delivery Delays")
+        st.markdown("### 📝 Analysis of Inbound Logistics")
         st.markdown("""
         - 📍 **Major cities** like **Los Angeles, New York, Washington, and Chicago** have **more delays**.
         - 🌍 **Suburban areas** tend to have **faster deliveries**.
@@ -265,7 +265,7 @@ if uploaded_file is not None:
         """)
 
     with col8:
-        st.markdown("### 📝 Analysis of Delivery Delays by Country")
+        st.markdown("### 📝 Analysis of Outbound Logistics")
         st.markdown("""
         - 📍 **General trends:** Most countries are **light green**, indicating slight average delays.
         - 🔵 **Advance deliveries (blue):** Some countries like **French Guiana and parts of Africa** receive shipments early.
