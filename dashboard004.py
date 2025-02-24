@@ -166,7 +166,7 @@ def show_dashboard():
 
 
         # 📌 Define Groups
-        g1 = {"Days for shipping (real)", "Days for shipment (scheduled)"}
+        g1 = {"Days for shipping (real)", "Delay Ratio"}
         g2 = {"Benefit per order", "Sales per customer", "Order Item Profit Ratio", 
               "Sales", "Order Item Total", "Order Profit Per Order"}
 
