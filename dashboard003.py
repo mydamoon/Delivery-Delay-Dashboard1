@@ -59,21 +59,37 @@ def show_dashboard():
         st.title("📊 Relationship Between Product Categories and Delays")
         st.markdown("---")
 
-        # 🟢 Treemap with Delay as Size
-        st.markdown("### 🌳 Delay Ratio by Category & Product")
+        # 📊 **Enhanced Treemap - Delay Analysis**
+        st.markdown("### 🌳 Improved Delay Ratio by Department & Category")
 
         fig = px.treemap(
             df_agg,
-            path=["Department Name", "Category Name"],  # Hierarchy: Department -> Category
-            values="total_delay",  # 🔹 Size based on total delay
+            path=["Department Name", "Category Name"],  # 🔹 Hierarchy: Department -> Category
+            values="total_delay",  # 🔹 Size based on total accumulated delay
             color="avg_delay",  # 🔹 Color based on average delay
-            color_continuous_scale=[
-                "rgb(0, 0, 255)",   # Blue for low delay
-                "rgb(255, 255, 255)",  # White for medium delay
-                "rgb(255, 0, 0)"    # Red for high delay
-            ],
+            color_continuous_scale="RdBu_r",  # 🔹 Aesthetic color scale (Red-Blue reverse)
             labels={"avg_delay": "Average Delay (days)", "total_delay": "Total Delay (days)"},
+            title="📊 Delay Ratio by Department & Category",
         )
+
+        # 🔹 **Customizations for better visualization**
+        fig.update_traces(
+            marker=dict(line=dict(width=1.5, color="black")),  # 🔹 Add black borders
+            textinfo="label+value+percent entry"  # 🔹 Show category name + total delay + percentage
+        )
+
+        # 🔹 **Update layout for better readability**
+        fig.update_layout(
+            margin=dict(t=40, l=10, r=10, b=10),  # Reduce white spaces
+            title_x=0.5,  # Center the title
+            coloraxis_colorbar=dict(
+                title="Average Delay (days)",
+                tickvals=[df_agg["avg_delay"].min(), df_agg["avg_delay"].max()],
+                ticktext=["Low", "High"]
+            )
+        )
+
+        # st.plotly_chart(fig, use_container_width=True)
 
         # # 🟢 Améliorations pour un affichage propre
         # fig.update_traces(
