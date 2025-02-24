@@ -164,68 +164,97 @@ def show_dashboard():
 
         st.markdown("---")
 
+        # 📊 **KPI - Correlation Between Shipping Delays and Profitability**
+        st.markdown("### 📈 KPI - Correlation Analysis Between Shipping Delays and Profitability")
 
-        # 📌 Define Groups
-        g1 = {"Days for shipping (real)", "Days for shipment (scheduled)"}
-        g2 = {"Benefit per order", "Sales per customer", "Order Item Profit Ratio", 
-              "Sales", "Order Item Total", "Order Profit Per Order"}
+        # ✅ List of required columns
+        required_columns = [
+            "Days for shipping (real)", "Days for shipment (scheduled)", 
+            "Benefit per order", "Sales per customer", "Order Item Profit Ratio", 
+            "Sales", "Order Item Total", "Order Profit Per Order"
+        ]
 
-        # ✅ Ensure the required columns exist in the dataset
-        available_g1 = [col for col in g1 if col in df.columns]
-        available_g2 = [col for col in g2 if col in df.columns]
+        # ✅ Keep only available columns
+        available_columns = [col for col in required_columns if col in df.columns]
 
-        if available_g1 and available_g2:
-            # 📌 Compute all correlations between g1 and g2
+        # ✅ Ensure necessary columns exist
+        if len(available_columns) == len(required_columns):  
+
+            # 📌 **Calculate Delay Measures**
+            df["Shipping Delay"] = df["Days for shipping (real)"] - df["Days for shipment (scheduled)"]
+
+            # 🔍 **Check for NaN values & Convert to numeric**
+            df = df[required_columns + ["Shipping Delay"]].copy()  # Keep only relevant columns
+            df = df.apply(pd.to_numeric, errors="coerce")  # Convert everything to numbers
+            df = df.dropna()  # Remove rows with NaN
+
+            # 📌 **List of financial indicators**
+            financial_metrics = [
+                "Benefit per order", "Sales per customer", "Order Item Profit Ratio",
+                "Sales", "Order Item Total", "Order Profit Per Order"
+            ]
+
+            # 📌 **Compute Correlations**
             correlation_results = {}
-            for col1 in available_g1:
-                for col2 in available_g2:
-                    correlation_value = df[col1].corr(df[col2])*100
-                    correlation_results[(col1, col2)] = abs(correlation_value)  # Store absolute value for comparison
+            for metric in financial_metrics:
+                correlation_results[metric] = {
+                    "Corr. with Shipping Delay": df["Shipping Delay"].corr(df[metric]),
+                    "Corr. with Days for shipping (real)": df["Days for shipping (real)"].corr(df[metric])
+                }
 
-            # 📌 Find the strongest correlation (highest absolute value)
-            strongest_pair = max(correlation_results, key=correlation_results.get)
-            strongest_value = df[strongest_pair[0]].corr(df[strongest_pair[1]])*100
+            # 📌 **Create Correlation Table**
+            correlation_df = pd.DataFrame(correlation_results).T
+            correlation_df.columns = ["Corr. with Shipping Delay", "Corr. with Days for shipping (real)"]
 
-            # 📌 Compute average financial metric for min/max shipping delay
-            min_delay_value = df[strongest_pair[0]].min()
-            max_delay_value = df[strongest_pair[0]].max()
-
-            avg_financial_min_delay = df[df[strongest_pair[0]] == min_delay_value][strongest_pair[1]].mean()
-            avg_financial_max_delay = df[df[strongest_pair[0]] == max_delay_value][strongest_pair[1]].mean()
-
-            # 📌 Interpretation function
+            # 📌 **Interpret the results**
             def interpret_correlation(value):
+                value = value * 100  # Convert to percentage
                 if value > 0.3:
-                    return "🔼 Positive Correlation (delays increase this metric)"
+                    return "Positive Correlation (delays increase this metric)"
                 elif value < -0.3:
-                    return "🔽 Negative Correlation (delays reduce this metric)"
+                    return "Negative Correlation (delays reduce this metric)"
                 else:
-                    return "➖ No Significant Correlation"
+                    return "No Significant Correlation"
 
-            # 📌 Display KPI in Streamlit
-            st.markdown("### 📊 KPI - Strongest Financial Impact of Shipping Delays")
-            
-            # Display KPI as a fraction
-            col_kpi1, col_kpi2 = st.columns(2)
+            correlation_df["Interpretation (Shipping Delay)"] = correlation_df["Corr. with Shipping Delay"].apply(interpret_correlation)
+            correlation_df["Interpretation (Days for shipping)"] = correlation_df["Corr. with Days for shipping (real)"].apply(interpret_correlation)
 
-            with col_kpi1:
-                st.metric(label=f"**📈 Correlation Value:** `{strongest_value:.2f}`", 
-                          value=f"{avg_financial_min_delay:.2f} / {avg_financial_max_delay:.2f}" if strongest_value is not None else "N/A", 
-                          delta=f"{(avg_financial_max_delay-avg_financial_min_delay)/avg_financial_min_delay*100:.2f}%" if strongest_value is not None else "N/A")
+            # # 📌 **Show correlation table in Streamlit**
+            # st.markdown("### 📊 Correlation Results")
+            # st.dataframe(correlation_df)
 
-            with col_kpi2:
-                st.markdown(f"""
-                **📝 Interpretation:**  
-                - **📈 Most Impacted Relationship:** `{strongest_pair[0]}` & `{strongest_pair[1]}`
-                - 🔍 Average `{strongest_pair[1]}` when `{strongest_pair[0]}` is at its **lowest** (`{min_delay_value}` days): `{avg_financial_min_delay:.2f}`
-                - 🔍 Average `{strongest_pair[1]}` when `{strongest_pair[0]}` is at its **highest** (`{max_delay_value}` days): `{avg_financial_max_delay:.2f}`
-                """)
+            # 📌 **Summary KPI Interpretation in Two Columns**
+            # st.markdown("### 📌 KPI - Correlation Analysis")
+
+            # 🟢 **Split Financial Metrics into Two Columns**
+            col1, col2 = st.columns(2)
+            metrics_split = len(financial_metrics) // 2
+
+            with col1:
+                st.markdown("#### 📊 Correlation with **Shipping Delay**")
+                for metric in financial_metrics:
+                    shipping_corr = correlation_results[metric]["Corr. with Shipping Delay"]
+                    # st.markdown(f"**📌 {metric}:** `{shipping_corr*-100:.2f}%` → {interpret_correlation(shipping_corr)}")
+                    st.markdown(
+                        f"**📌 {metric}:** <span style='color:{'green' if shipping_corr*100 > 0.3 else 'red' if shipping_corr*100 < -0.3 else 'gray'}'>"
+                        f"{shipping_corr*-100:.2f}%</span> → {interpret_correlation(shipping_corr)}",
+                        unsafe_allow_html=True
+                    )
+
+            with col2:
+                st.markdown("#### 📊 Correlation with **Absolute Shipping Time**")
+                for metric in financial_metrics:
+                    real_days_corr = correlation_results[metric]["Corr. with Days for shipping (real)"]
+                    # st.markdown(f"**📌 {metric}:** `{real_days_corr*-100:.2f}%` → {interpret_correlation(real_days_corr)}")
+                    st.markdown(
+                        f"**📌 {metric}:** <span style='color:{'green' if real_days_corr*100 > 0.3 else 'red' if real_days_corr*100 < -0.3 else 'gray'}'>"
+                        f"{real_days_corr*-100:.2f}%</span> → {interpret_correlation(real_days_corr)}",
+                        unsafe_allow_html=True
+                    )
 
         else:
-            st.warning("⚠️ Required columns are missing from the dataset. Please check your data.")
-
-
-        st.markdown("---")
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            st.warning(f"⚠️ Required columns missing: {', '.join(missing_columns)}. Please check your dataset.")
 
     else:
         st.warning("⚠️ Please upload a CSV file to view the visualizations.")
