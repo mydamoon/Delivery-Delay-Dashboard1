@@ -155,7 +155,7 @@ def show_dashboard():
             # ✅ **Improve design**
             fig.update_layout(
                 # yaxis=dict(tickformat=".2f", title="Average Delay (days)"),
-                yaxis=dict(tickformat=".2f", title="Average Delay (days)", range=[0.45, df_grouped["avg_delay"].max() + 0.05]),
+                yaxis=dict(tickformat=".2f", title="Average Delay (days)", range=[df_grouped["avg_delay"].min() - 0.05, df_grouped["avg_delay"].max() + 0.05]),
                 xaxis=dict(title="Customer Segment"),
                 legend_title="Type",
             )
