@@ -15,33 +15,30 @@ def show_dashboard():
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file, encoding='latin-1')
 
-        # 📌 **Convert Date to Datetime**
-        df["Shipping date (DateOrders)"] = pd.to_datetime(df["shipping date (DateOrders)"], errors="coerce")
+        # 📌 **Convert "Shipping date (DateOrders)" to datetime**
+        df["Shipping date (DateOrders)"] = pd.to_datetime(df["shipping date (DateOrders)"], errors='coerce')
 
-        # 📌 **Filters**
-        st.sidebar.markdown("### 🎯 Filters")
+        # 📌 **Add year filter**
+        st.sidebar.markdown("### 📆 Filter by Year")
+        available_years = df["Shipping date (DateOrders)"].dt.year.dropna().unique()
+        selected_years = st.sidebar.multiselect("Select Year", available_years, default=available_years)
+        if selected_years:
+            df = df[df["Shipping date (DateOrders)"].dt.year.isin(selected_years)]
 
-        # 📆 **Year, Quarter, Month Filters**
-        df["Year"] = df["Shipping date (DateOrders)"].dt.year
-        df["Quarter"] = df["Shipping date (DateOrders)"].dt.to_period("Q")
-        df["Month"] = df["Shipping date (DateOrders)"].dt.to_period("M")
+        # 📌 **Adding dynamic filters**
+        st.sidebar.markdown("### 🎯 Available Filters")
 
-        # ✅ **Vérifier que "Order Region" et "Year" ne sont pas vides**
-        if "Order Region" in df.columns and df["Order Region"].notna().sum() > 0:
-            selected_region = st.sidebar.multiselect("🌍 Select Region", list(df["Order Region"].dropna().unique()), default=df["Order Region"].dropna().unique())
-        else:
-            selected_region = []
 
-        if "Year" in df.columns and df["Year"].notna().sum() > 0:
-            selected_year = st.sidebar.multiselect("📆 Select Year", sorted(df["Year"].dropna().unique()), default=df["Year"].dropna().unique())
-        else:
-            selected_year = []
+        # 🔹 **Drilldown to Department**
+        column_names = list(df.columns)
+        filters = ["Type","Category Name","Department Name","Market","Order Region","Product Name","Shipping Mode",]
+        for col in filters:
+            departments = df[col].unique()
+            if len(departments)<15:
+                selected_departments = st.sidebar.multiselect(col, departments, default=departments)
 
-        # 📌 **Filtrer les données en fonction des sélections**
-        if selected_region:
-            df = df[df["Order Region"].isin(selected_region)]
-        if selected_year:
-            df = df[df["Year"].isin(selected_year)]
+                if selected_departments:
+                    df = df[df[col].isin(selected_departments)]
 
         # 📌 **Vérification des colonnes nécessaires**
         required_columns = ["Days for shipping (real)", "Days for shipment (scheduled)", "Order Profit Per Order", "Sales", "Customer Segment"]
@@ -94,9 +91,160 @@ def show_dashboard():
                 xaxis=dict(tickformat=".4f"),
                 legend_title="Customer Segment"
             )
-            fig.update_traces(marker=dict(opacity=0.5, line=dict(width=1, color="black")))  # Add transparency + outline
+            fig.update_traces(marker=dict(opacity=.75, line=dict(width=1, color="black")))  # Add transparency + outline
 
             st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("---")
+
+        # 📊 **Analysis Section**
+        st.markdown("### 🔍 Insights & Analysis")
+
+        # Create two columns for better readability
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### 📌 Consumer Segment")
+            st.write("""
+            - **Moderate delay ratio (~0.57)**
+            - **Higher profit margin (~11%)**
+            - Largest sales contribution (biggest bubble)
+            - Less affected by delays compared to other segments
+            - **Consumers** seem more resilient to shipping delays.
+            """)
+
+
+        with col2:
+            st.markdown("#### 📌 Home Office Segment")
+            st.write("""
+            - **Highest delay ratio (~0.585)**
+            - **Lower profit margin (~10.5%)**
+            - Indicates a possible negative correlation between delays and profitability
+            - May require targeted shipping improvements
+            - **Home Office customers** face a sharper decline in profitability with increasing delays.
+            """)
+
+        st.markdown("---")        
+
+        # 📊 **Grouped Bar Chart - Profitability & Delays by Payment Type & Customer Segment**
+        st.markdown("### 💳 Profitability & Delays by Customer Segment & Payment Type")
+
+        # ✅ Ensure the column exists
+        if "Type" in df.columns:
+            df_grouped = df.groupby(["Customer Segment", "Type"]).agg(
+                avg_delay=("Delay Ratio", "mean")
+            ).reset_index()
+
+            # 📊 **Create a grouped bar chart**
+            fig = px.bar(
+                df_grouped,
+                x="Customer Segment",
+                y="avg_delay",
+                color="Type",
+                barmode="group",  # Group bars next to each other
+                labels={"avg_delay": "Average Delay (days)", "Customer Segment": "Customer Segment"},
+                # title="📊 Average Delay by Customer Segment & Payment Type",
+            )
+
+
+            # ✅ **Add black border around bars**
+            fig.update_traces(marker=dict(
+                line=dict(color="black", width=1.5)  # Black border with width 1.5
+            ))
+    
+            # ✅ **Improve design**
+            fig.update_layout(
+                # yaxis=dict(tickformat=".2f", title="Average Delay (days)"),
+                yaxis=dict(tickformat=".2f", title="Average Delay (days)", range=[0.45, df_grouped["avg_delay"].max() + 0.05]),
+                xaxis=dict(title="Customer Segment"),
+                legend_title="Type",
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("---")
+
+        # 📊 **KPI - Correlation Between Shipping Delays and Profitability**
+        st.markdown("### 📈 KPI - Correlation Analysis Between Shipping Delays and Profitability")
+
+        # ✅ List of required columns
+        required_columns = [
+            "Days for shipping (real)", "Days for shipment (scheduled)", 
+            "Benefit per order", "Sales per customer", "Order Item Profit Ratio", 
+            "Sales", "Order Item Total", "Order Profit Per Order"
+        ]
+
+        # ✅ Keep only available columns
+        available_columns = [col for col in required_columns if col in df.columns]
+
+        # ✅ Ensure necessary columns exist
+        if len(available_columns) == len(required_columns):  
+
+            # 📌 **Calculate Delay Measures**
+            df["Shipping Delay"] = df["Days for shipping (real)"] - df["Days for shipment (scheduled)"]
+
+            # 🔍 **Check for NaN values & Convert to numeric**
+            df = df[required_columns + ["Shipping Delay"]].copy()  # Keep only relevant columns
+            df = df.apply(pd.to_numeric, errors="coerce")  # Convert everything to numbers
+            df = df.dropna()  # Remove rows with NaN
+
+            # 📌 **List of financial indicators**
+            financial_metrics = [
+                "Benefit per order", "Sales per customer", "Order Item Profit Ratio",
+                "Sales", "Order Item Total", "Order Profit Per Order"
+            ]
+
+            # 📌 **Compute Correlations**
+            correlation_results = {}
+            for metric in financial_metrics:
+                correlation_results[metric] = {
+                    "Corr. with Shipping Delay": df["Shipping Delay"].corr(df[metric]),
+                    "Corr. with Days for shipping (real)": df["Days for shipping (real)"].corr(df[metric])
+                }
+
+            # 📌 **Create Correlation Table**
+            correlation_df = pd.DataFrame(correlation_results).T
+            correlation_df.columns = ["Corr. with Shipping Delay", "Corr. with Days for shipping (real)"]
+
+            # 📌 **Interpret the results**
+            def interpret_correlation(value):
+                value=value*100
+                if value > 0.3:
+                    return "🔼 Positive Correlation (delays increase this metric)"
+                elif value < -0.3:
+                    return "🔽 Negative Correlation (delays reduce this metric)"
+                else:
+                    return "➖ No Significant Correlation"
+
+            correlation_df["Interpretation (Shipping Delay)"] = correlation_df["Corr. with Shipping Delay"].apply(interpret_correlation)
+            correlation_df["Interpretation (Days for shipping)"] = correlation_df["Corr. with Days for shipping (real)"].apply(interpret_correlation)
+
+            # # 📌 **Show correlation table in Streamlit**
+            # st.markdown("### 📊 Correlation Results")
+            # st.dataframe(correlation_df)
+
+            # 📌 **Summary KPI Interpretation in Two Columns**
+            # st.markdown("### 📌 KPI - Correlation Analysis")
+
+            # 🟢 **Split Financial Metrics into Two Columns**
+            col1, col2 = st.columns(2)
+            metrics_split = len(financial_metrics) // 2
+
+            with col1:
+                st.markdown("#### 📊 Correlation with **Shipping Delay**")
+                for metric in financial_metrics:
+                    shipping_corr = correlation_results[metric]["Corr. with Shipping Delay"]
+                    st.markdown(f"**📌 {metric}:** `{shipping_corr*100:.2f}%` → {interpret_correlation(shipping_corr)}")
+
+            with col2:
+                st.markdown("#### 📊 Correlation with **Absolute Shipping Time**")
+                for metric in financial_metrics:
+                    real_days_corr = correlation_results[metric]["Corr. with Days for shipping (real)"]
+                    st.markdown(f"**📌 {metric}:** `{real_days_corr*100:.2f}%` → {interpret_correlation(real_days_corr)}")
+
+        else:
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            st.warning(f"⚠️ Required columns missing: {', '.join(missing_columns)}. Please check your dataset.")
 
     else:
         st.warning("⚠️ Please upload a CSV file to view the visualizations.")
