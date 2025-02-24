@@ -208,13 +208,13 @@ def show_dashboard():
 
             # 📌 **Interpret the results**
             def interpret_correlation(value):
-                value=value*100
+                value = value * 100  # Convert to percentage
                 if value > 0.3:
-                    return "🔼 Positive Correlation (delays increase this metric)"
+                    return "Positive Correlation (delays increase this metric)"
                 elif value < -0.3:
-                    return "🔽 Negative Correlation (delays reduce this metric)"
+                    return "Negative Correlation (delays reduce this metric)"
                 else:
-                    return "➖ No Significant Correlation"
+                    return "No Significant Correlation"
 
             correlation_df["Interpretation (Shipping Delay)"] = correlation_df["Corr. with Shipping Delay"].apply(interpret_correlation)
             correlation_df["Interpretation (Days for shipping)"] = correlation_df["Corr. with Days for shipping (real)"].apply(interpret_correlation)
@@ -234,13 +234,23 @@ def show_dashboard():
                 st.markdown("#### 📊 Correlation with **Shipping Delay**")
                 for metric in financial_metrics:
                     shipping_corr = correlation_results[metric]["Corr. with Shipping Delay"]
-                    st.markdown(f"**📌 {metric}:** `{shipping_corr*100:.2f}%` → {interpret_correlation(shipping_corr)}")
+                    # st.markdown(f"**📌 {metric}:** `{shipping_corr*-100:.2f}%` → {interpret_correlation(shipping_corr)}")
+                    st.markdown(
+                        f"**📌 {metric}:** <span style='color:{'green' if shipping_corr*100 > 0.3 else 'red' if shipping_corr*100 < -0.3 else 'gray'}'>"
+                        f"{shipping_corr*-100:.2f}%</span> → {interpret_correlation(shipping_corr)}",
+                        unsafe_allow_html=True
+                    )
 
             with col2:
                 st.markdown("#### 📊 Correlation with **Absolute Shipping Time**")
                 for metric in financial_metrics:
                     real_days_corr = correlation_results[metric]["Corr. with Days for shipping (real)"]
-                    st.markdown(f"**📌 {metric}:** `{real_days_corr*100:.2f}%` → {interpret_correlation(real_days_corr)}")
+                    # st.markdown(f"**📌 {metric}:** `{real_days_corr*-100:.2f}%` → {interpret_correlation(real_days_corr)}")
+                    st.markdown(
+                        f"**📌 {metric}:** <span style='color:{'green' if real_days_corr*100 > 0.3 else 'red' if real_days_corr*100 < -0.3 else 'gray'}'>"
+                        f"{real_days_corr*-100:.2f}%</span> → {interpret_correlation(real_days_corr)}",
+                        unsafe_allow_html=True
+                    )
 
         else:
             missing_columns = [col for col in required_columns if col not in df.columns]
