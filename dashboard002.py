@@ -113,7 +113,7 @@ def show_dashboard():
             }
 
         st.markdown("---")
-        st.title("📊 Dashboard - Delivery Delays")
+        st.title("📊 Delivery Delays")
         st.markdown("---")
         ## 🗺️ **1️⃣ Client Map | Country Map**
         col1, col2 = st.columns(2)
